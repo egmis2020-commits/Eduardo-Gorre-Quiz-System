@@ -1,2 +1,2 @@
-# Phase 1 remote connection smoke test only; not yet the full app dependency set.
+# Turso remote driver used by the hosted database adapter
 turso_serverless

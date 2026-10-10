@@ -23,7 +23,7 @@ app.secret_key = os.environ.get('QUIZ_SECRET', 'tle-css-quiz-v4-change-this')
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
-    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_SECURE=(os.environ.get('QUIZ_ACCESS_MODE', 'lan').strip().lower() == 'public'),
     SESSION_COOKIE_PATH='/',
     SESSION_REFRESH_EACH_REQUEST=True,
 )
@@ -213,6 +213,21 @@ def student_access_url():
 
 
 def db():
+    """Open the explicitly selected primary database.
+
+    Local mode retains the original SQLite file for LAN/offline use. Hosted
+    Turso mode never falls back to a per-instance SQLite file on failure.
+    """
+    mode = os.environ.get('QUIZ_DB_MODE', 'local').strip().lower()
+    if mode == 'turso':
+        url = os.environ.get('TURSO_DATABASE_URL', '').strip()
+        token = os.environ.get('TURSO_AUTH_TOKEN', '').strip()
+        if not url or not token:
+            raise RuntimeError('QUIZ_DB_MODE=turso requires TURSO_DATABASE_URL and TURSO_AUTH_TOKEN.')
+        from turso_compat import TursoConnection
+        return TursoConnection(url, token)
+    if mode != 'local':
+        raise RuntimeError('Invalid QUIZ_DB_MODE. Use local or turso.')
     conn = sqlite3.connect(DB, timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute('PRAGMA foreign_keys = ON')
@@ -327,11 +342,12 @@ def init_db():
     # WAL lets many students read while another request writes. The busy timeout
     # prevents short read/write collisions from immediately becoming 'database is locked'.
     # WAL + a longer busy timeout is important when many student devices are connected.
-    try:
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA synchronous=NORMAL')
-    except sqlite3.OperationalError:
-        pass
+    if os.environ.get('QUIZ_DB_MODE', 'local').strip().lower() == 'local':
+        try:
+            conn.execute('PRAGMA journal_mode=WAL')
+            conn.execute('PRAGMA synchronous=NORMAL')
+        except sqlite3.OperationalError:
+            pass
     conn.executescript('''
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1663,6 +1679,7 @@ if __name__=='__main__':
     print('Internet:         NOT required')
     print('Public access:    optional — start_public.py')
     print('QR code:          LAN URL only in default mode')
-    print('Analytics:        DuckDB secondary store (SQLite remains authoritative)')
+    print('Primary DB mode:   ' + os.environ.get('QUIZ_DB_MODE', 'local').strip().lower())
+    print('Analytics:        DuckDB secondary store (non-critical)')
     print('='*52 + '\n')
     app.run(host='0.0.0.0', port=8000, debug=False)
