@@ -1,0 +1,13 @@
+V24.4 PATCH INSTALLATION
+1. Stop the quiz server (Ctrl+C).
+2. Back up the existing app.py and templates folder.
+3. Extract this patch into the existing v24 folder, preserving quiz.db, analytics.duckdb, and static/uploads.
+4. Overwrite matching files when prompted.
+5. Restart with the existing start_lan.bat.
+6. Log in as Admin > Students. Create a small test batch first, print the credentials, and verify a test student can log in and change the temporary password.
+7. Confirm the Login page no longer offers public registration. Old /register bookmarks redirect to Login.
+
+
+Bulk registration input format: one student per line as Complete Name, Gender, Grade Level. Example: Juan Dela Cruz, Male, 7. Gender must be Male/Female and grade must be 7–12. Commas or tabs may separate the fields.
+
+Bulk registration UI refresh: the Students page now uses a responsive two-column layout with a clear student-entry box, formatted example, quick rules, and a highlighted reminder note. No database changes are required.
