@@ -4,3 +4,4 @@ qrcode>=7.4,<9.0
 Pillow>=10.0,<13.0
 Waitress>=3.0,<4.0
 DuckDB>=1.1,<2.0
+gunicorn
